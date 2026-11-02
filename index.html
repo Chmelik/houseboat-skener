@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skener Houseboats</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #f2f5f8;
+    color: #183044;
+    text-align: center;
+  }
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    background: white;
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: 0 4px 18px #0001;
+  }
+  h1 { font-size: 25px; margin: 5px 0 8px; }
+  p { line-height: 1.5; }
+  select, button {
+    width: 100%;
+    padding: 15px;
+    margin: 9px 0;
+    border-radius: 10px;
+    font-size: 17px;
+  }
+  select { border: 1px solid #bbb; background: white; }
+  button {
+    border: 0;
+    background: #174e70;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .45; }
+  .secondary { background: #637786; }
+  video, canvas, #preview {
+    width: 100%;
+    max-height: 65vh;
+    object-fit: contain;
+    background: #17232c;
+    border-radius: 12px;
+    margin-top: 12px;
+  }
+  #preview { display: none; }
+  #status {
+    padding: 12px;
+    margin-top: 12px;
+    border-radius: 9px;
+    background: #edf3f7;
+    overflow-wrap: anywhere;
+  }
+  .small { font-size: 13px; color: #61717d; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>📷 Skener Houseboats</h1>
+  <p>Vyber houseboat a vyfoť vyplněný registrační lístek.</p>
+
+  <select id="boat">
+    <option value="Daisy">Daisy</option>
+    <option value="Rosie">Rosie</option>
+    <option value="Poppy">Poppy</option>
+    <option value="Lilly">Lilly</option>
+  </select>
+
+  <video id="video" autoplay playsinline muted style="display:none"></video>
+  <img id="preview" alt="Náhled fotografie">
+  <canvas id="canvas" style="display:none"></canvas>
+
+  <button id="start" onclick="startCamera()">Otevřít fotoaparát</button>
+  <button id="capture" onclick="takePhoto()" style="display:none">Vyfotit lístek</button>
+  <button id="retake" class="secondary" onclick="retakePhoto()" style="display:none">Vyfotit znovu</button>
+  <button id="send" onclick="sendPhoto()" style="display:none">Předat do domovní knihy</button>
+
+  <div id="status">Fotoaparát zatím není spuštěný.</div>
+  <p class="small">Fotografie se předá do domovní knihy až po stisknutí tlačítka Předat.</p>
+</div>
+
+<script>
+let stream = null;
+let photoBlob = null;
+
+const video = document.getElementById('video');
+const preview = document.getElementById('preview');
+const canvas = document.getElementById('canvas');
+const statusBox = document.getElementById('status');
+
+function showStatus(message) {
+  statusBox.textContent = message;
+}
+
+async function startCamera() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Tento prohlížeč nepodporuje přístup ke kameře.');
+    }
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    });
+
+    video.srcObject = stream;
+    video.style.display = 'block';
+    preview.style.display = 'none';
+
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('capture').style.display = 'block';
+    document.getElementById('retake').style.display = 'none';
+    document.getElementById('send').style.display = 'none';
+
+    showStatus('Kamera je připravena. Zaměř lístek a vyfoť ho.');
+  } catch (error) {
+    showStatus('Kameru se nepodařilo otevřít: ' + error.message);
+  }
+}
+
+function takePhoto() {
+  if (!video.videoWidth) {
+    showStatus('Kamera ještě není připravena. Zkus to znovu.');
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const context = canvas.getContext('2d');
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(function(blob) {
+    if (!blob) {
+      showStatus('Fotografii se nepodařilo vytvořit.');
+      return;
+    }
+
+    photoBlob = blob;
+    preview.src = URL.createObjectURL(blob);
+    preview.style.display = 'block';
+    video.style.display = 'none';
+
+    stopCamera();
+
+    document.getElementById('capture').style.display = 'none';
+    document.getElementById('retake').style.display = 'block';
+    document.getElementById('send').style.display = 'block';
+
+    showStatus('Fotografie je připravena. Zkontroluj, zda je lístek dobře čitelný.');
+  }, 'image/jpeg', 0.85);
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+}
+
+function retakePhoto() {
+  photoBlob = null;
+  startCamera();
+}
+
+function sendPhoto() {
+  if (!photoBlob) {
+    showStatus('Nejdříve vyfoť registrační lístek.');
+    return;
+  }
+
+  if (!window.opener) {
+    showStatus('Skener funguje, ale nebyl otevřen z domovní knihy. Zatím fotografii nepředávám.');
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onloadend = function() {
+    const dataUrl = reader.result;
+    const base64Data = dataUrl.split(',')[1];
+
+    window.opener.postMessage({
+      type: 'HOUSEBOAT_SCAN',
+      boat: document.getElementById('boat').value,
+      base64Data: base64Data,
+      fileName: 'registracni_listek.jpg',
+      mimeType: 'image/jpeg'
+    }, '*');
+
+    showStatus('Fotografie byla předána domovní knize. Můžeš toto okno zavřít.');
+  };
+
+  reader.readAsDataURL(photoBlob);
+}
+
+window.addEventListener('beforeunload', stopCamera);
+</script>
+</body>
+</html>
