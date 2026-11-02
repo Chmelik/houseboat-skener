@@ -50,6 +50,12 @@ video {
   <h1>📷 Skener Houseboats</h1>
   <p>Vyber houseboat a vyfoť registrační lístek.</p>
 
+  <label for="arrival">Příjezd:</label>
+<input type="date" id="arrival">
+
+<label for="departure">Odjezd:</label>
+<input type="date" id="departure">
+
   <select id="boat">
     <option value="Daisy">Daisy</option>
     <option value="Rosie">Rosie</option>
@@ -476,6 +482,8 @@ function sendPhoto() {
     window.opener.postMessage({
       type: 'HOUSEBOAT_SCAN',
       boat: document.getElementById('boat').value,
+      arrival: document.getElementById('arrival').value,
+departure: document.getElementById('departure').value,
       base64Data: reader.result.split(',')[1],
       fileName: 'registracni_listek.jpg',
       mimeType: 'image/jpeg'
