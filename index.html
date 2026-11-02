@@ -4,104 +4,170 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Skener Houseboats</title>
+
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-    background: #f2f5f8;
-    color: #183044;
-    text-align: center;
-  }
-  .app {
-    max-width: 520px;
-    margin: 0 auto;
-    background: white;
-    padding: 22px;
-    border-radius: 18px;
-    box-shadow: 0 4px 18px #0001;
-  }
-  h1 { font-size: 25px; margin: 5px 0 8px; }
-  p { line-height: 1.5; }
-  select, button {
-    width: 100%;
-    padding: 15px;
-    margin: 9px 0;
-    border-radius: 10px;
-    font-size: 17px;
-  }
-  select { border: 1px solid #bbb; background: white; }
-  button {
-    border: 0;
-    background: #174e70;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  button:disabled { opacity: .45; }
-  .secondary { background: #637786; }
-  video, canvas, #preview {
-    width: 100%;
-    max-height: 65vh;
-    object-fit: contain;
-    background: #17232c;
-    border-radius: 12px;
-    margin-top: 12px;
-  }
-  #preview { display: none; }
-  #status {
-    padding: 12px;
-    margin-top: 12px;
-    border-radius: 9px;
-    background: #edf3f7;
-    overflow-wrap: anywhere;
-  }
-  .small { font-size: 13px; color: #61717d; }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 18px;
+  font-family: Arial, sans-serif;
+  background: #f1f5f8;
+  color: #183044;
+  text-align: center;
+}
+
+.app {
+  max-width: 520px;
+  margin: auto;
+  padding: 22px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px #0001;
+}
+
+h1 { font-size: 26px; }
+
+p { line-height: 1.5; }
+
+select, button {
+  width: 100%;
+  padding: 16px;
+  margin: 9px 0;
+  border-radius: 11px;
+  font-size: 17px;
+}
+
+select {
+  border: 1px solid #bbb;
+  background: white;
+}
+
+button {
+  border: 0;
+  background: #174e70;
+  color: white;
+  font-weight: bold;
+}
+
+button.secondary { background: #657988; }
+button.light { background: #e5edf2; color: #183044; }
+
+button:disabled { opacity: .45; }
+
+video, img {
+  width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  background: #17232c;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+
+img { display: none; }
+
+#status {
+  padding: 13px;
+  margin-top: 12px;
+  border-radius: 10px;
+  background: #edf3f7;
+  overflow-wrap: anywhere;
+}
+
+.small {
+  font-size: 13px;
+  color: #61717d;
+}
 </style>
 </head>
+
 <body>
 <div class="app">
-  <h1>📷 Skener Houseboats</h1>
-  <p>Vyber houseboat a vyfoť vyplněný registrační lístek.</p>
 
-  <select id="boat">
-    <option value="Daisy">Daisy</option>
-    <option value="Rosie">Rosie</option>
-    <option value="Poppy">Poppy</option>
-    <option value="Lilly">Lilly</option>
-  </select>
+<h1>📷 Skener Houseboats</h1>
+<p>Vyber houseboat a vyfoť registrační lístek.</p>
 
-  <video id="video" autoplay playsinline muted style="display:none"></video>
-  <img id="preview" alt="Náhled fotografie">
-  <canvas id="canvas" style="display:none"></canvas>
+<select id="boat">
+  <option value="Daisy">Daisy</option>
+  <option value="Rosie">Rosie</option>
+  <option value="Poppy">Poppy</option>
+  <option value="Lilly">Lilly</option>
+</select>
 
-  <button id="start" onclick="startCamera()">Otevřít fotoaparát</button>
-  <button id="capture" onclick="takePhoto()" style="display:none">Vyfotit lístek</button>
-  <button id="retake" class="secondary" onclick="retakePhoto()" style="display:none">Vyfotit znovu</button>
-  <button id="send" onclick="sendPhoto()" style="display:none">Předat do domovní knihy</button>
+<video id="video" autoplay playsinline muted style="display:none"></video>
+<img id="preview" alt="Náhled skenu">
+<canvas id="canvas" style="display:none"></canvas>
 
-  <div id="status">Fotoaparát zatím není spuštěný.</div>
-  <p class="small">Fotografie se předá do domovní knihy až po stisknutí tlačítka Předat.</p>
+<button id="start" onclick="startCamera()">Otevřít fotoaparát</button>
+
+<button id="capture" onclick="takePhoto()" style="display:none">
+  Vyfotit lístek
+</button>
+
+<button id="scan" class="light" onclick="scanDocument()" style="display:none">
+  Najít okraje a narovnat
+</button>
+
+<button id="retake" class="secondary" onclick="retakePhoto()" style="display:none">
+  Vyfotit znovu
+</button>
+
+<button id="send" onclick="sendPhoto()" style="display:none">
+  Předat do domovní knihy
+</button>
+
+<div id="status">Připravuji skener…</div>
+
+<p class="small">
+  Skenování probíhá přímo v telefonu. Fotografie se odešle až po tvém potvrzení.
+</p>
+
 </div>
+
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
 
 <script>
 let stream = null;
 let photoBlob = null;
+let cvReady = false;
 
 const video = document.getElementById('video');
 const preview = document.getElementById('preview');
 const canvas = document.getElementById('canvas');
 const statusBox = document.getElementById('status');
 
-function showStatus(message) {
+function status(message) {
   statusBox.textContent = message;
 }
+
+function show(id, visible) {
+  document.getElementById(id).style.display =
+    visible ? 'block' : 'none';
+}
+
+function waitForOpenCV() {
+  if (typeof cv !== 'undefined' && cv.Mat) {
+    cvReady = true;
+    status('Skener je připraven. Můžeš fotografovat.');
+    return;
+  }
+
+  if (typeof cv !== 'undefined') {
+    cv.onRuntimeInitialized = function() {
+      cvReady = true;
+      status('Skener je připraven. Můžeš fotografovat.');
+    };
+  } else {
+    setTimeout(waitForOpenCV, 500);
+  }
+}
+
+waitForOpenCV();
 
 async function startCamera() {
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error('Tento prohlížeč nepodporuje přístup ke kameře.');
+      throw new Error('Prohlížeč nepodporuje kameru.');
     }
 
     stream = await navigator.mediaDevices.getUserMedia({
@@ -114,51 +180,19 @@ async function startCamera() {
     });
 
     video.srcObject = stream;
-    video.style.display = 'block';
-    preview.style.display = 'none';
+    show('video', true);
+    show('preview', false);
+    show('start', false);
+    show('capture', true);
+    show('scan', false);
+    show('retake', false);
+    show('send', false);
 
-    document.getElementById('start').style.display = 'none';
-    document.getElementById('capture').style.display = 'block';
-    document.getElementById('retake').style.display = 'none';
-    document.getElementById('send').style.display = 'none';
+    status('Kamera je zapnutá. Zaměř celý registrační lístek.');
 
-    showStatus('Kamera je připravena. Zaměř lístek a vyfoť ho.');
   } catch (error) {
-    showStatus('Kameru se nepodařilo otevřít: ' + error.message);
+    status('Kameru se nepodařilo otevřít: ' + error.message);
   }
-}
-
-function takePhoto() {
-  if (!video.videoWidth) {
-    showStatus('Kamera ještě není připravena. Zkus to znovu.');
-    return;
-  }
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const context = canvas.getContext('2d');
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  canvas.toBlob(function(blob) {
-    if (!blob) {
-      showStatus('Fotografii se nepodařilo vytvořit.');
-      return;
-    }
-
-    photoBlob = blob;
-    preview.src = URL.createObjectURL(blob);
-    preview.style.display = 'block';
-    video.style.display = 'none';
-
-    stopCamera();
-
-    document.getElementById('capture').style.display = 'none';
-    document.getElementById('retake').style.display = 'block';
-    document.getElementById('send').style.display = 'block';
-
-    showStatus('Fotografie je připravena. Zkontroluj, zda je lístek dobře čitelný.');
-  }, 'image/jpeg', 0.85);
 }
 
 function stopCamera() {
@@ -168,6 +202,228 @@ function stopCamera() {
   }
 }
 
+function takePhoto() {
+  if (!video.videoWidth) {
+    status('Kamera ještě není připravena.');
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  canvas.getContext('2d').drawImage(
+    video, 0, 0, canvas.width, canvas.height
+  );
+
+  canvas.toBlob(function(blob) {
+    if (!blob) {
+      status('Fotografii se nepodařilo vytvořit.');
+      return;
+    }
+
+    photoBlob = blob;
+    showPreview(blob);
+    stopCamera();
+
+    show('video', false);
+    show('capture', false);
+    show('scan', true);
+    show('retake', true);
+    show('send', true);
+
+    status(cvReady
+      ? 'Fotografie pořízena. Můžeš spustit automatické narovnání.'
+      : 'Fotografie pořízena. Načítám skenovací knihovnu…');
+  }, 'image/jpeg', 0.92);
+}
+
+function showPreview(blob) {
+  if (preview.src.startsWith('blob:')) {
+    URL.revokeObjectURL(preview.src);
+  }
+  preview.src = URL.createObjectURL(blob);
+  show('preview', true);
+}
+
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function orderPoints(points) {
+  const sums = points.map(p => p.x + p.y);
+  const diffs = points.map(p => p.x - p.y);
+
+  const tl = points[sums.indexOf(Math.min(...sums))];
+  const br = points[sums.indexOf(Math.max(...sums))];
+  const tr = points[diffs.indexOf(Math.max(...diffs))];
+  const bl = points[diffs.indexOf(Math.min(...diffs))];
+
+  return [tl, tr, br, bl];
+}
+
+function scanDocument() {
+  if (!photoBlob) {
+    status('Nejdříve vyfoť lístek.');
+    return;
+  }
+
+  if (!cvReady) {
+    status('Skenovací knihovna se ještě načítá. Chvilku počkej.');
+    return;
+  }
+
+  status('Hledám okraje dokumentu…');
+
+  const image = new Image();
+
+  image.onload = function() {
+    let src, gray, blurred, edges, contours, hierarchy;
+    let kernel, approx, best = null;
+
+    try {
+      src = cv.imread(image);
+      gray = new cv.Mat();
+      blurred = new cv.Mat();
+      edges = new cv.Mat();
+      contours = new cv.MatVector();
+      hierarchy = new cv.Mat();
+      kernel = cv.Mat.ones(5, 5, cv.CV_8U);
+      approx = new cv.Mat();
+
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      cv.Canny(blurred, edges, 50, 150);
+      cv.dilate(edges, edges, kernel);
+
+      cv.findContours(
+        edges,
+        contours,
+        hierarchy,
+        cv.RETR_LIST,
+        cv.CHAIN_APPROX_SIMPLE
+      );
+
+      let bestArea = 0;
+      const imageArea = src.cols * src.rows;
+
+      for (let i = 0; i < contours.size(); i++) {
+        const contour = contours.get(i);
+        const perimeter = cv.arcLength(contour, true);
+
+        cv.approxPolyDP(
+          contour,
+          approx,
+          0.02 * perimeter,
+          true
+        );
+
+        if (approx.rows === 4) {
+          const area = Math.abs(cv.contourArea(approx));
+
+          if (area > bestArea && area > imageArea * 0.12) {
+            bestArea = area;
+            best = [];
+
+            for (let j = 0; j < 4; j++) {
+              best.push({
+                x: approx.intAt(j, 0),
+                y: approx.intAt(j, 1)
+              });
+            }
+          }
+        }
+
+        contour.delete();
+      }
+
+      if (!best) {
+        status('Okraje se nepodařilo bezpečně najít. Zkus lístek vyfotit znovu na kontrastním pozadí.');
+        return;
+      }
+
+      const pts = orderPoints(best);
+
+      const width = Math.max(
+        distance(pts[0], pts[1]),
+        distance(pts[3], pts[2])
+      );
+
+      const height = Math.max(
+        distance(pts[0], pts[3]),
+        distance(pts[1], pts[2])
+      );
+
+      if (width < 100 || height < 100) {
+        status('Nalezený dokument je příliš malý. Zkus fotografovat blíže.');
+        return;
+      }
+
+      const sourcePoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        pts[0].x, pts[0].y,
+        pts[1].x, pts[1].y,
+        pts[2].x, pts[2].y,
+        pts[3].x, pts[3].y
+      ]);
+
+      const targetPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        width, 0,
+        width, height,
+        0, height
+      ]);
+
+      const transform = cv.getPerspectiveTransform(
+        sourcePoints,
+        targetPoints
+      );
+
+      const result = new cv.Mat();
+
+      cv.warpPerspective(
+        src,
+        result,
+        transform,
+        new cv.Size(Math.round(width), Math.round(height))
+      );
+
+      canvas.width = result.cols;
+      canvas.height = result.rows;
+      cv.imshow(canvas, result);
+
+      canvas.toBlob(function(blob) {
+        if (blob) {
+          photoBlob = blob;
+          showPreview(blob);
+          status('Dokument byl narovnán. Zkontroluj, zda jsou vidět všechny údaje.');
+        }
+      }, 'image/jpeg', 0.94);
+
+      sourcePoints.delete();
+      targetPoints.delete();
+      transform.delete();
+      result.delete();
+
+    } catch (error) {
+      status('Při skenování nastala chyba: ' + error.message);
+    } finally {
+      if (src) src.delete();
+      if (gray) gray.delete();
+      if (blurred) blurred.delete();
+      if (edges) edges.delete();
+      if (contours) contours.delete();
+      if (hierarchy) hierarchy.delete();
+      if (kernel) kernel.delete();
+      if (approx) approx.delete();
+    }
+  };
+
+  image.onerror = function() {
+    status('Fotografii se nepodařilo načíst.');
+  };
+
+  image.src = preview.src;
+}
+
 function retakePhoto() {
   photoBlob = null;
   startCamera();
@@ -175,30 +431,27 @@ function retakePhoto() {
 
 function sendPhoto() {
   if (!photoBlob) {
-    showStatus('Nejdříve vyfoť registrační lístek.');
+    status('Nejdříve vyfoť dokument.');
     return;
   }
 
   if (!window.opener) {
-    showStatus('Skener funguje, ale nebyl otevřen z domovní knihy. Zatím fotografii nepředávám.');
+    status('Skener funguje, ale zatím není propojen s domovní knihou. Fotografii neposílám.');
     return;
   }
 
   const reader = new FileReader();
 
   reader.onloadend = function() {
-    const dataUrl = reader.result;
-    const base64Data = dataUrl.split(',')[1];
-
     window.opener.postMessage({
       type: 'HOUSEBOAT_SCAN',
       boat: document.getElementById('boat').value,
-      base64Data: base64Data,
+      base64Data: reader.result.split(',')[1],
       fileName: 'registracni_listek.jpg',
       mimeType: 'image/jpeg'
     }, '*');
 
-    showStatus('Fotografie byla předána domovní knize. Můžeš toto okno zavřít.');
+    status('Fotografie byla předána. Toto okno můžeš zavřít.');
   };
 
   reader.readAsDataURL(photoBlob);
