@@ -473,6 +473,11 @@ function sendPhoto() {
     return;
   }
 
+  if (!window.opener) {
+    status('Skener není propojen s domovní knihou. Otevři ho z domovní knihy.');
+    return;
+  }
+
   const arrival = document.getElementById('arrival').value;
   const departure = document.getElementById('departure').value;
 
@@ -486,33 +491,17 @@ function sendPhoto() {
   const reader = new FileReader();
 
   reader.onloadend = function() {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://script.google.com/macros/s/AKfycbzgSzDWOjGFymRXnXwIFOO_fSb1U2DOgMx-btBIl8Mx5blV6F1eGXuUvKHh2ZZjNlDx/exec';
-    form.target = '_blank';
-
-    const data = {
+    window.opener.postMessage({
+      type: 'HOUSEBOAT_SCAN',
       boat: document.getElementById('boat').value,
       arrival: arrival,
       departure: departure,
       base64Data: reader.result.split(',')[1],
       fileName: 'registracni_listek.jpg',
       mimeType: 'image/jpeg'
-    };
+    }, '*');
 
-    Object.keys(data).forEach(key => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = data[key];
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
-
-    status('Fotografie byla odeslána. Zkontroluj výsledek v novém okně.');
+    status('Fotografie byla předána do domovní knihy. Můžeš se vrátit do původního okna.');
   };
 
   reader.readAsDataURL(photoBlob);
